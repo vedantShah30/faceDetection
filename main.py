@@ -8,22 +8,37 @@ from database import (
     create_student,
     activate_student,
     delete_student,
-    get_all_active_students
+    get_all_active_students,
+    get_all_periods,
+    get_period
 )
 
 from dataset import generate_dataset
-
 from trainer import train_classifier
-
 from recognizer import run_recognition
 
+from period_manager import (
+    create_new_period,
+    start_attendance_period
+)
+
+from attendance_manager import (
+    display_attendance_report
+)
+
+from database import close_period
+
+
+# -------------------------------------------------
+# STUDENT REGISTRATION
+# -------------------------------------------------
 
 def register_student():
 
     print("\n========== STUDENT REGISTRATION ==========")
 
     roll_number = input(
-        "Enter student roll number: "
+        "Enter roll number: "
     ).strip()
 
     name = input(
@@ -31,29 +46,26 @@ def register_student():
     ).strip()
 
     if not roll_number or not name:
-        print("Name and roll number cannot be empty.")
+        print("Name and roll number are required.")
         return
+
+    student_id = None
+    activated = False
 
     try:
 
-        # Create inactive student record
         student_id = create_student(
             roll_number,
             name
         )
 
-        print(f"\nStudent ID generated: {student_id}")
+        print(f"Generated student ID: {student_id}")
 
-        # Generate face dataset
         samples = generate_dataset(student_id)
 
-        # Check minimum dataset size
         if samples < MIN_SAMPLES:
 
-            print(
-                f"\nRegistration cancelled. "
-                f"Minimum {MIN_SAMPLES} images required."
-            )
+            print("Insufficient face samples.")
 
             delete_student(student_id)
 
@@ -64,36 +76,18 @@ def register_student():
 
             return
 
-        # Activate student
         activate_student(student_id)
+        activated = True
 
-        print("\nStudent registered successfully.")
-
-        # Retrain model automatically
-        print("\nUpdating recognition model...")
+        print("Student registered successfully.")
 
         train_classifier()
 
-        print("\nRegistration and model update completed.")
-
-    except (ValueError, RuntimeError, FileNotFoundError) as e:
-
-        print(f"\nRegistration error: {e}")
-
-        if 'student_id' in locals():
-
-            delete_student(student_id)
-
-            student_dir = DATASET_DIR / str(student_id)
-
-            if student_dir.exists():
-                shutil.rmtree(student_dir)
-
     except Exception as e:
 
-        print(f"\nUnexpected error: {e}")
+        print(f"Registration failed: {e}")
 
-        if 'student_id' in locals():
+        if student_id is not None and not activated:
 
             delete_student(student_id)
 
@@ -102,6 +96,18 @@ def register_student():
             if student_dir.exists():
                 shutil.rmtree(student_dir)
 
+        elif student_id is not None and activated:
+
+            # Retain the student's registration if training fails.
+            print(
+                "Student registration is retained. "
+                "Retry model training."
+            )
+
+
+# -------------------------------------------------
+# VIEW STUDENTS
+# -------------------------------------------------
 
 def view_students():
 
@@ -113,22 +119,97 @@ def view_students():
         print("No registered students.")
         return
 
-    print(
-        f"{'ID':<8}"
-        f"{'ROLL NUMBER':<20}"
-        f"{'NAME':<25}"
-    )
-
-    print("-" * 53)
-
     for student in students:
 
         print(
-            f"{student['id']:<8}"
-            f"{student['roll_number']:<20}"
-            f"{student['name']:<25}"
+            f"ID: {student['id']} | "
+            f"Roll: {student['roll_number']} | "
+            f"Name: {student['name']}"
         )
 
+
+# -------------------------------------------------
+# VIEW PERIODS
+# -------------------------------------------------
+
+def view_periods():
+
+    periods = get_all_periods()
+
+    print("\n========== PERIOD HISTORY ==========")
+
+    if not periods:
+        print("No periods created.")
+        return
+
+    for period in periods:
+
+        print(
+            f"ID: {period['id']} | "
+            f"Subject: {period['subject']} | "
+            f"Date: {period['date']} | "
+            f"Status: {period['status']} | "
+            f"Duration: {period['duration_minutes']} minutes"
+        )
+
+
+# -------------------------------------------------
+# START ATTENDANCE
+# -------------------------------------------------
+
+def start_attendance():
+
+    period_id = start_attendance_period()
+
+    if period_id is None:
+        return
+
+    try:
+
+        print("\nStarting attendance camera...")
+
+        run_recognition(period_id)
+
+    except Exception as e:
+
+        print(f"Recognition error: {e}")
+
+    finally:
+
+        # Close period when camera session ends.
+        close_period(period_id)
+
+        print("Attendance period closed.")
+
+
+# -------------------------------------------------
+# VIEW ATTENDANCE REPORT
+# -------------------------------------------------
+
+def view_report():
+
+    view_periods()
+
+    period_id = input(
+        "\nEnter period ID for report: "
+    ).strip()
+
+    if not period_id.isdigit():
+        print("Invalid period ID.")
+        return
+
+    period = get_period(int(period_id))
+
+    if not period:
+        print("Period not found.")
+        return
+
+    display_attendance_report(int(period_id))
+
+
+# -------------------------------------------------
+# MAIN
+# -------------------------------------------------
 
 def main():
 
@@ -137,17 +218,23 @@ def main():
     while True:
 
         print("\n")
-        print("=" * 45)
+        print("=" * 50)
         print("       FACE RECOGNITION ATTENDANCE")
-        print("=" * 45)
+        print("=" * 50)
 
         print("1. Register New Student")
         print("2. Train Classifier")
         print("3. Start Face Recognition")
-        print("4. View Registered Students")
-        print("5. Exit")
+        print("4. Create Attendance Period")
+        print("5. Start Attendance")
+        print("6. View Attendance Report")
+        print("7. View All Periods")
+        print("8. View Registered Students")
+        print("9. Exit")
 
-        choice = input("\nEnter your choice: ").strip()
+        choice = input(
+            "\nEnter your choice: "
+        ).strip()
 
         try:
 
@@ -165,20 +252,36 @@ def main():
 
             elif choice == "4":
 
-                view_students()
+                create_new_period()
 
             elif choice == "5":
+
+                start_attendance()
+
+            elif choice == "6":
+
+                view_report()
+
+            elif choice == "7":
+
+                view_periods()
+
+            elif choice == "8":
+
+                view_students()
+
+            elif choice == "9":
 
                 print("Exiting application.")
                 break
 
             else:
 
-                print("Invalid choice. Try again.")
+                print("Invalid choice.")
 
         except Exception as e:
 
-            print(f"\nError: {e}")
+            print(f"\nApplication error: {e}")
 
 
 if __name__ == "__main__":

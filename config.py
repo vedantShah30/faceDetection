@@ -38,3 +38,9 @@ RECOGNITION_THRESHOLD = 70
 DATASET_DIR.mkdir(parents=True, exist_ok=True)
 MODEL_DIR.mkdir(parents=True, exist_ok=True)
 DATABASE_DIR.mkdir(parents=True, exist_ok=True)
+
+# Period management
+DEFAULT_PERIOD_DURATION = 60
+
+# Time format is local machine time
+DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
