@@ -566,3 +566,93 @@ def get_period_report(period_id):
     conn.close()
 
     return [dict(r) for r in records]
+
+
+# -------------------------------------------------
+# ADDITIONAL STUDENT MANAGEMENT OPERATIONS
+# -------------------------------------------------
+
+def get_student_record(student_id):
+
+    conn = get_connection()
+
+    student = conn.execute("""
+        SELECT *
+        FROM students
+        WHERE id = ?
+    """, (student_id,)).fetchone()
+
+    conn.close()
+
+    return dict(student) if student else None
+
+
+def get_all_students():
+
+    conn = get_connection()
+
+    students = conn.execute("""
+        SELECT *
+        FROM students
+        ORDER BY id
+    """).fetchall()
+
+    conn.close()
+
+    return [dict(s) for s in students]
+
+
+def search_students(query):
+
+    conn = get_connection()
+
+    search = f"%{query.strip()}%"
+
+    students = conn.execute("""
+        SELECT *
+        FROM students
+        WHERE roll_number LIKE ?
+           OR name LIKE ?
+        ORDER BY id
+    """, (search, search)).fetchall()
+
+    conn.close()
+
+    return [dict(s) for s in students]
+
+
+def update_student_details(student_id, name, roll_number):
+
+    if not name.strip() or not roll_number.strip():
+        raise ValueError("Name and roll number are required.")
+
+    conn = get_connection()
+
+    try:
+
+        cursor = conn.execute("""
+            UPDATE students
+
+            SET name = ?,
+                roll_number = ?
+
+            WHERE id = ?
+        """, (
+            name.strip(),
+            roll_number.strip(),
+            student_id
+        ))
+
+        conn.commit()
+
+        if cursor.rowcount == 0:
+            raise ValueError("Student not found.")
+
+    except sqlite3.IntegrityError:
+
+        raise ValueError(
+            "This roll number is already registered."
+        )
+
+    finally:
+        conn.close()

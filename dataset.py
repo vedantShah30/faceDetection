@@ -12,9 +12,10 @@ from config import (
     FACE_SCALE_FACTOR,
     FACE_MIN_NEIGHBORS
 )
+from pathlib import Path
 
 
-def generate_dataset(student_id):
+def generate_dataset(student_id, output_dir=None):
 
     face_classifier = cv2.CascadeClassifier(
         str(CASCADE_PATH)
@@ -26,7 +27,12 @@ def generate_dataset(student_id):
         )
 
     # Student-specific directory
-    student_dir = DATASET_DIR / str(student_id)
+    student_dir = (
+        Path(output_dir)
+        if output_dir is not None
+        else DATASET_DIR / str(student_id)
+    )
+
     student_dir.mkdir(parents=True, exist_ok=True)
 
     # Camera initialization

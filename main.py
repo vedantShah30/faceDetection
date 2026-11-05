@@ -28,6 +28,21 @@ from attendance_manager import (
 
 from database import close_period
 
+from student_manager import (
+    display_students,
+    search_student,
+    edit_student,
+    remove_student,
+    restore_student,
+    reregister_student
+)
+
+from analytics import (
+    display_student_analytics,
+    display_low_attendance,
+    get_class_overview
+)
+
 
 # -------------------------------------------------
 # STUDENT REGISTRATION
@@ -205,11 +220,22 @@ def view_report():
         return
 
     display_attendance_report(int(period_id))
+    
+def display_class_analytics():
+
+    report = get_class_overview()
+
+    print("\n========== CLASS OVERVIEW ==========")
+
+    print(f"Active students: {report['total_students']}")
+    print(f"Completed periods: {report['total_periods']}")
+    print(f"Subjects: {report['total_subjects']}")
 
 
 # -------------------------------------------------
 # MAIN
 # -------------------------------------------------
+
 
 def main():
 
@@ -218,10 +244,11 @@ def main():
     while True:
 
         print("\n")
-        print("=" * 50)
-        print("       FACE RECOGNITION ATTENDANCE")
-        print("=" * 50)
+        print("=" * 55)
+        print("          FACE RECOGNITION ATTENDANCE")
+        print("=" * 55)
 
+        print("\n--- CORE OPERATIONS ---")
         print("1. Register New Student")
         print("2. Train Classifier")
         print("3. Start Face Recognition")
@@ -229,54 +256,93 @@ def main():
         print("5. Start Attendance")
         print("6. View Attendance Report")
         print("7. View All Periods")
-        print("8. View Registered Students")
-        print("9. Exit")
 
-        choice = input(
-            "\nEnter your choice: "
-        ).strip()
+        print("\n--- STUDENT MANAGEMENT ---")
+        print("8. View All Students")
+        print("9. Search Student")
+        print("10. Update Student")
+        print("11. Deactivate Student")
+        print("12. Reactivate Student")
+        print("13. Re-register Student Face")
+
+        print("\n--- ATTENDANCE ANALYTICS ---")
+        print("14. Student Attendance Analytics")
+        print("15. Students Below 75%")
+        print("16. Overall Class Analytics")
+
+        print("\n17. Exit")
+
+        choice = input("\nEnter your choice: ").strip()
 
         try:
 
             if choice == "1":
-
                 register_student()
 
             elif choice == "2":
-
                 train_classifier()
 
             elif choice == "3":
-
                 run_recognition()
 
             elif choice == "4":
-
                 create_new_period()
 
             elif choice == "5":
-
                 start_attendance()
 
             elif choice == "6":
-
                 view_report()
 
             elif choice == "7":
-
                 view_periods()
 
             elif choice == "8":
-
-                view_students()
+                display_students()
 
             elif choice == "9":
+                search_student()
 
+            elif choice == "10":
+                edit_student()
+
+            elif choice == "11":
+                remove_student()
+
+            elif choice == "12":
+                restore_student()
+
+            elif choice == "13":
+                reregister_student()
+
+            elif choice == "14":
+
+                display_students()
+
+                student_id = input(
+                    "\nEnter student ID: "
+                ).strip()
+
+                if student_id.isdigit():
+
+                    display_student_analytics(
+                        int(student_id)
+                    )
+
+                else:
+                    print("Invalid student ID.")
+
+            elif choice == "15":
+                display_low_attendance(75)
+
+            elif choice == "16":
+                display_class_analytics()
+
+            elif choice == "17":
                 print("Exiting application.")
                 break
 
             else:
-
                 print("Invalid choice.")
 
         except Exception as e:
@@ -285,5 +351,5 @@ def main():
 
 
 if __name__ == "__main__":
-
     main()
+
